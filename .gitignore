@@ -1,13 +1,52 @@
+# Dependencies
 node_modules
-dist
-.turbo
 .pnpm-store
-.git
-*.md
-.env
-*.env
-coverage
+
+# Build outputs
+dist
 .next
-scripts
+out
+build
+
+# Turborepo cache
+.turbo
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Database
 prisma/*.db
-docs
+*.sqlite
+
+# Test coverage
+coverage
+
+# IDE
+.idea
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp
+temp
+
+# Prisma migrations (optional - commit if needed)
+# packages/db/prisma/migrations
+
+# Vite
+*.local
