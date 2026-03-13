@@ -1,0 +1,12 @@
+node_modules
+dist
+.pnpm-store
+.git
+.github
+*.md
+.env
+*.env
+coverage
+.next
+scripts
+prisma/*.db

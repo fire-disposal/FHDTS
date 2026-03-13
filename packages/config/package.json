@@ -1,0 +1,11 @@
+{
+  "name": "config",
+  "version": "0.0.1",
+  "private": true,
+  "exports": {
+    "./tsconfig": "./tsconfig.json"
+  },
+  "files": [
+    "tsconfig.json"
+  ]
+}
