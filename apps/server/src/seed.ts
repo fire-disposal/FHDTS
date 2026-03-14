@@ -1,5 +1,5 @@
-import { hashPassword } from './shared/infra/auth.js'
-import { prisma } from './shared/infra/database.js'
+import { hashPassword } from './shared/platform/auth.js'
+import { prisma } from './shared/platform/database.js'
 
 async function seed() {
   console.log('Seeding database...')

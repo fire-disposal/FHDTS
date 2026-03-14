@@ -94,15 +94,17 @@ novadt/
 ├── apps/
 │   ├── server/           # 后端应用
 │   │   ├── src/
-│   │   │   ├── modules/  # 业务模块 (DDD)
+│   │   │   ├── app/      # 应用装配层（router/bootstrap）
+│   │   │   ├── modules/  # 业务模块（DDD-lite）
 │   │   │   │   ├── auth/
-│   │   │   │   ├── user/
-│   │   │   │   ├── patient/
-│   │   │   │   └── observation/
-│   │   │   ├── shared/   # 共享基础设施
-│   │   │   │   ├── infra/  # 数据库、认证
-│   │   │   │   └── kernel/ # 基类抽象
-│   │   │   ├── trpc/     # tRPC 配置
+│   │   │   │   │   ├── application/  # commands/queries
+│   │   │   │   │   ├── ports/        # 端口接口
+│   │   │   │   │   └── adapters/     # prisma/trpc 适配器
+│   │   │   │   └── user/
+│   │   │   ├── shared/
+│   │   │   │   ├── platform/ # 数据库、认证、环境
+│   │   │   │   └── kernel/   # 领域通用错误等
+│   │   │   ├── trpc/     # tRPC 上下文与过程
 │   │   │   └── main.ts   # 入口文件
 │   │   └── package.json
 │   │
@@ -117,10 +119,10 @@ novadt/
 │       └── package.json
 │
 ├── packages/
-│   ├── config/           # 共享配置 (TypeScript)
-│   └── shared/           # 共享类型和工具
+│   ├── tsconfig/         # 共享 TS 配置
 │
 ├── docker/               # Docker 配置
+├── docs/                 # 架构与设计文档
 ├── scripts/              # 脚本工具
 └── turbo.json            # Turborepo 配置
 ```
