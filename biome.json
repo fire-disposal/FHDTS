@@ -6,7 +6,6 @@
     "useIgnoreFile": true
   },
   "files": {
-    "ignore": ["node_modules", "dist", ".next", ".turbo", "coverage", "*.log"],
     "ignoreUnknown": true
   },
   "formatter": {
