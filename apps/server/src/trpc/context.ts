@@ -1,7 +1,7 @@
 import { TRPCError, initTRPC } from '@trpc/server'
 import SuperJSON from 'superjson'
-import { verifyToken } from '../shared/infra/auth.js'
-import { prisma } from '../shared/infra/database.js'
+import { verifyToken } from '../shared/platform/auth.js'
+import { prisma } from '../shared/platform/database.js'
 
 interface TRPCContext {
   userId?: string

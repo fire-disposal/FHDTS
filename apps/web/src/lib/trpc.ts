@@ -1,4 +1,4 @@
-import type { AppRouter } from '@server/router/index.ts'
+import type { AppRouter } from '@server/app/router.ts'
 import { createTRPCReact, httpBatchLink } from '@trpc/react-query'
 import type { inferRouterInputs, inferRouterOutputs } from '@trpc/server'
 import SuperJSON from 'superjson'
