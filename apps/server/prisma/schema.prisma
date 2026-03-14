@@ -4,13 +4,12 @@ generator client {
 
 datasource db {
   provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 enum Role {
   ADMIN
   USER
-  CAREGIVER
-  FAMILY
 }
 
 enum Status {
@@ -34,76 +33,29 @@ model User {
 
   @@index([email])
   @@index([role])
+  @@index([status])
 }
 
 model Session {
-  id           String   @id @default(cuid())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  token        String   @unique
-  expiresAt    DateTime
-  createdAt    DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 
   @@index([userId])
   @@index([token])
 }
 
 model RefreshToken {
-  id           String   @id @default(cuid())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  token        String   @unique
-  expiresAt    DateTime
-  createdAt    DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 
   @@index([userId])
   @@index([token])
-}
-
-model Patient {
-  id           String        @id @default(cuid())
-  name         String
-  dateOfBirth  DateTime
-  gender       String
-  mrn          String?       @unique
-  status       Status        @default(ACTIVE)
-  observations Observation[]
-  devices      Device[]
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-
-  @@index([mrn])
-  @@index([status])
-}
-
-model Observation {
-  id          String   @id @default(cuid())
-  patientId   String
-  patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  code        String
-  display     String?
-  value       String
-  unit        String?
-  effectiveAt DateTime
-  createdAt   DateTime @default(now())
-
-  @@index([patientId])
-  @@index([code])
-  @@index([effectiveAt])
-}
-
-model Device {
-  id           String   @id @default(cuid())
-  patientId    String?
-  patient      Patient? @relation(fields: [patientId], references: [id], onDelete: SetNull)
-  serialNumber String   @unique
-  deviceType   String
-  manufacturer String?
-  status       Status   @default(ACTIVE)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@index([patientId])
-  @@index([serialNumber])
-  @@index([deviceType])
 }

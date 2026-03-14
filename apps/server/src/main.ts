@@ -2,17 +2,17 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import fastifyCors from '@fastify/cors'
 import fastifyStatic from '@fastify/static'
+import { fastifyTRPCPlugin } from '@trpc/server/adapters/fastify'
 import Fastify from 'fastify'
-import { startTcpServer } from './iot/server.js'
-import { gracefulShutdown, prisma } from './shared/infra/database.js'
+import { appRouter } from './router/index.js'
+import { gracefulShutdown } from './shared/infra/database.js'
 import { env } from './shared/infra/env.js'
+import { createTRPCContext } from './trpc/context.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-const fastify = Fastify({
-  logger: true,
-})
+const fastify = Fastify({ logger: true })
 
 await fastify.register(fastifyCors, {
   origin: env.CORS_ORIGIN,
@@ -24,61 +24,47 @@ await fastify.register(fastifyStatic, {
   prefix: '/',
 })
 
-fastify.register(async app => {
-  app.get('/api/health', async () => ({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-  }))
-
-  app.get('/api/info', async () => ({
-    name: 'Digital Twin API',
-    version: '0.0.1',
-    environment: env.NODE_ENV,
-  }))
+await fastify.register(fastifyTRPCPlugin, {
+  prefix: '/trpc',
+  trpcOptions: {
+    router: appRouter,
+    createContext: ({ req }) => createTRPCContext({ req }),
+  },
 })
 
-const PORT = env.PORT
+fastify.get('/api/health', async () => ({
+  status: 'ok',
+  timestamp: new Date().toISOString(),
+  uptime: process.uptime(),
+}))
 
-const start = async () => {
-  let tcpServer: ReturnType<typeof startTcpServer> | null = null
+fastify.get('/api/info', async () => ({
+  name: 'Digital Twin API',
+  version: '0.0.1',
+  environment: env.NODE_ENV,
+}))
 
-  const shutdown = async (signal: string) => {
-    console.log(`\n🛑 Received ${signal}, shutting down gracefully...`)
-
-    try {
-      await fastify.close()
-      console.log('✅ HTTP server closed')
-
-      if (tcpServer) {
-        tcpServer.close()
-        console.log('✅ TCP server closed')
-      }
-
-      await gracefulShutdown()
-      console.log('✅ Database connections closed')
-
-      process.exit(0)
-    } catch (err) {
-      console.error('❌ Error during shutdown:', err)
-      process.exit(1)
-    }
-  }
-
-  process.on('SIGTERM', () => shutdown('SIGTERM'))
-  process.on('SIGINT', () => shutdown('SIGINT'))
+const shutdown = async (signal: string) => {
+  fastify.log.info(`Received ${signal}, shutting down gracefully`)
 
   try {
-    await fastify.listen({ port: Number(PORT), host: '0.0.0.0' })
-    console.log(`🚀 Server running at http://0.0.0.0:${PORT}`)
-
-    tcpServer = startTcpServer(env.TCP_PORT)
-    console.log(`📡 TCP IoT server listening on port ${env.TCP_PORT}`)
-  } catch (err) {
-    fastify.log.error(err)
-    await prisma.$disconnect()
+    await fastify.close()
+    await gracefulShutdown()
+    process.exit(0)
+  } catch (error) {
+    fastify.log.error(error)
     process.exit(1)
   }
 }
 
-start()
+process.on('SIGTERM', () => void shutdown('SIGTERM'))
+process.on('SIGINT', () => void shutdown('SIGINT'))
+
+try {
+  await fastify.listen({ port: env.PORT, host: '0.0.0.0' })
+  fastify.log.info(`Server running at http://0.0.0.0:${env.PORT}`)
+} catch (error) {
+  fastify.log.error(error)
+  await gracefulShutdown()
+  process.exit(1)
+}

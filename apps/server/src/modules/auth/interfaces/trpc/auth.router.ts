@@ -1,7 +1,7 @@
 import { z } from 'zod'
-import { prisma } from '../../../shared/infra/database'
-import { createTRPCRouter, protectedProcedure, publicProcedure } from '../../../trpc/context'
-import { createAuthService } from '../application/services/auth.service'
+import { prisma } from '../../../../shared/infra/database.js'
+import { createTRPCRouter, protectedProcedure, publicProcedure } from '../../../../trpc/context.js'
+import { createAuthService } from '../../application/services/auth.service.js'
 
 const authService = createAuthService(prisma)
 
@@ -27,8 +27,5 @@ export const authRouter = createTRPCRouter({
 
   getProfile: protectedProcedure.query(({ ctx }) => authService.getProfile(ctx.userId)),
 
-  logout: protectedProcedure.mutation(() => {
-    // 实现登出逻辑
-    return { success: true }
-  }),
+  logout: protectedProcedure.mutation(() => ({ success: true })),
 })

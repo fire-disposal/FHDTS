@@ -1,7 +1,6 @@
-import { generateToken, hashPassword, verifyPassword } from '../../../shared/infra/auth'
-import type { prisma } from '../../../shared/infra/database'
-import { Service } from '../../../shared/kernel/base'
-import { UnauthorizedError } from '../../../shared/kernel/errors'
+import { ConflictError, UnauthorizedError } from '../../../../shared/kernel/errors.js'
+import { generateToken, hashPassword, verifyPassword } from '../../../../shared/infra/auth.js'
+import type { prisma } from '../../../../shared/infra/database.js'
 
 interface LoginInput {
   email: string
@@ -18,26 +17,27 @@ interface UserResponse {
   id: string
   email: string
   name: string | null
-  role: string
+  role: 'ADMIN' | 'USER'
+  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'
 }
 
-export class AuthService extends Service {
-  async login(input: LoginInput): Promise<{ token: string; user: UserResponse }> {
-    const { email, password } = input
+export class AuthService {
+  constructor(private readonly db: typeof prisma) {}
 
+  async login(input: LoginInput): Promise<{ token: string; user: UserResponse }> {
     const user = await this.db.user.findUnique({
-      where: { email },
+      where: { email: input.email },
       select: {
         id: true,
         email: true,
         name: true,
         role: true,
-        passwordHash: true,
         status: true,
+        passwordHash: true,
       },
     })
 
-    if (!user || !(await verifyPassword(password, user.passwordHash))) {
+    if (!user || !(await verifyPassword(input.password, user.passwordHash))) {
       throw new UnauthorizedError('Invalid email or password')
     }
 
@@ -45,17 +45,12 @@ export class AuthService extends Service {
       throw new UnauthorizedError('Account is not active')
     }
 
-    // 更新最后登录时间
     await this.db.user.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
     })
 
-    const token = generateToken({
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-    })
+    const token = generateToken({ userId: user.id, email: user.email })
 
     return {
       token,
@@ -64,48 +59,38 @@ export class AuthService extends Service {
         email: user.email,
         name: user.name,
         role: user.role,
+        status: user.status,
       },
     }
   }
 
   async register(input: RegisterInput): Promise<{ token: string; user: UserResponse }> {
-    const { email, password, name } = input
-
-    const existingUser = await this.db.user.findUnique({
-      where: { email },
-    })
-
-    if (existingUser) {
-      throw new Error('Email already exists')
+    const exists = await this.db.user.findUnique({ where: { email: input.email } })
+    if (exists) {
+      throw new ConflictError('Email already exists')
     }
 
-    const passwordHash = await hashPassword(password)
+    const passwordHash = await hashPassword(input.password)
 
     const user = await this.db.user.create({
       data: {
-        email,
+        email: input.email,
         passwordHash,
-        name,
-        role: 'USER', // 默认角色
+        name: input.name,
+        role: 'USER',
       },
       select: {
         id: true,
         email: true,
         name: true,
         role: true,
+        status: true,
       },
     })
 
-    const token = generateToken({
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-    })
+    const token = generateToken({ userId: user.id, email: user.email })
 
-    return {
-      token,
-      user,
-    }
+    return { token, user }
   }
 
   async getProfile(userId: string): Promise<UserResponse> {
@@ -116,6 +101,7 @@ export class AuthService extends Service {
         email: true,
         name: true,
         role: true,
+        status: true,
       },
     })
 
@@ -123,12 +109,7 @@ export class AuthService extends Service {
       throw new UnauthorizedError('User not found')
     }
 
-    return {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-    }
+    return user
   }
 }
 

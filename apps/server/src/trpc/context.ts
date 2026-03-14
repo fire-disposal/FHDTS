@@ -1,29 +1,30 @@
-import { initTRPC, TRPCError } from '@trpc/server'
+import { TRPCError, initTRPC } from '@trpc/server'
 import SuperJSON from 'superjson'
-import { verifyToken } from '../shared/infra/auth'
-import { prisma } from '../shared/infra/database'
+import { verifyToken } from '../shared/infra/auth.js'
+import { prisma } from '../shared/infra/database.js'
 
 interface TRPCContext {
   userId?: string
   email?: string
-  role?: string
 }
 
 interface AuthenticatedContext {
   userId: string
   email: string
-  role: string
+  role: 'ADMIN' | 'USER'
 }
 
-export type { TRPCContext, AuthenticatedContext }
+export type { AuthenticatedContext, TRPCContext }
 
-export const createTRPCContext = async ({ req }: { req: Request }): Promise<TRPCContext> => {
-  const authHeader = req.headers.get('authorization')
+export async function createTRPCContext(opts: {
+  req: { headers: Record<string, string | string[] | undefined> }
+}): Promise<TRPCContext> {
+  const rawAuthHeader = opts.req.headers.authorization
+  const authHeader = Array.isArray(rawAuthHeader) ? rawAuthHeader[0] : rawAuthHeader
 
   if (authHeader?.startsWith('Bearer ')) {
-    const token = authHeader.replace('Bearer ', '')
+    const token = authHeader.slice(7)
     const payload = verifyToken(token)
-
     if (payload) {
       return { userId: payload.userId, email: payload.email }
     }
@@ -39,10 +40,10 @@ const t = initTRPC.context<TRPCContext>().create({
 export const createTRPCRouter = t.router
 export const publicProcedure = t.procedure
 
-export const protectedProcedure = t.procedure.use(async opts => {
+const requireAuth = t.middleware(async opts => {
   const { ctx } = opts
 
-  if (!ctx.userId) {
+  if (!ctx.userId || !ctx.email) {
     throw new TRPCError({ code: 'UNAUTHORIZED', message: 'You must be logged in' })
   }
 
@@ -57,10 +58,6 @@ export const protectedProcedure = t.procedure.use(async opts => {
 
   if (user.status !== 'ACTIVE') {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Account is not active' })
-  }
-
-  if (!ctx.email) {
-    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Email not found in context' })
   }
 
   return opts.next({
@@ -68,63 +65,16 @@ export const protectedProcedure = t.procedure.use(async opts => {
       userId: ctx.userId,
       email: ctx.email,
       role: user.role,
-    },
+    } as AuthenticatedContext,
   })
 })
 
-export const adminProcedure = t.procedure.use(async opts => {
-  const { ctx } = opts
+export const protectedProcedure = t.procedure.use(requireAuth)
 
-  if (!ctx.userId) {
-    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'You must be logged in' })
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { id: ctx.userId },
-    select: { role: true, status: true },
-  })
-
-  if (!user) {
-    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not found' })
-  }
-
-  if (user.status !== 'ACTIVE') {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Account is not active' })
-  }
-
-  if (user.role !== 'ADMIN') {
+export const adminProcedure = protectedProcedure.use(async opts => {
+  if (opts.ctx.role !== 'ADMIN') {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Admin access required' })
   }
 
-  if (!ctx.email) {
-    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Email not found in context' })
-  }
-
-  return opts.next({
-    ctx: {
-      userId: ctx.userId,
-      email: ctx.email,
-      role: user.role,
-    },
-  })
+  return opts.next()
 })
-
-export function handleTRPCError(error: unknown): TRPCError {
-  if (error instanceof TRPCError) {
-    return error
-  }
-
-  if (error instanceof Error) {
-    if (error.message.includes('not found')) {
-      return new TRPCError({ code: 'NOT_FOUND', message: error.message })
-    }
-    if (error.message.includes('Unauthorized') || error.message.includes('unauthorized')) {
-      return new TRPCError({ code: 'UNAUTHORIZED', message: error.message })
-    }
-    if (error.message.includes('Admin access required') || error.message.includes('Forbidden')) {
-      return new TRPCError({ code: 'FORBIDDEN', message: error.message })
-    }
-  }
-
-  return new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'An unexpected error occurred' })
-}

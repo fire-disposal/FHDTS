@@ -1,7 +1,7 @@
 import { z } from 'zod'
-import { prisma } from '../../../shared/infra/database'
-import { adminProcedure, createTRPCRouter, protectedProcedure } from '../../../trpc/context'
-import { createUserService } from '../application/services/user.service'
+import { prisma } from '../../../../shared/infra/database.js'
+import { adminProcedure, createTRPCRouter, protectedProcedure } from '../../../../trpc/context.js'
+import { createUserService } from '../../application/services/user.service.js'
 
 const userService = createUserService(prisma)
 
@@ -18,7 +18,7 @@ export const userRouter = createTRPCRouter({
     .input(
       z.object({
         email: z.string().email(),
-        role: z.enum(['ADMIN', 'CAREGIVER', 'FAMILY']),
+        role: z.enum(['ADMIN', 'USER']),
         password: z.string().min(6),
         name: z.string().optional(),
       })
@@ -32,7 +32,7 @@ export const userRouter = createTRPCRouter({
         data: z.object({
           status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']).optional(),
           name: z.string().optional(),
-          role: z.enum(['ADMIN', 'CAREGIVER', 'FAMILY']).optional(),
+          role: z.enum(['ADMIN', 'USER']).optional(),
         }),
       })
     )
