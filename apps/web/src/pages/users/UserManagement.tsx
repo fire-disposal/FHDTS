@@ -14,8 +14,7 @@ import type { User } from '../../lib/trpc'
 
 const roleLabels: Record<string, string> = {
   ADMIN: '管理员',
-  CAREGIVER: '护理人员',
-  FAMILY: '家属',
+  USER: '普通用户',
 }
 
 const statusLabels: Record<string, string> = {
@@ -26,8 +25,7 @@ const statusLabels: Record<string, string> = {
 
 const roleColors: Record<string, string> = {
   ADMIN: 'red',
-  CAREGIVER: 'blue',
-  FAMILY: 'green',
+  USER: 'blue',
 }
 
 export function UserManagement() {
@@ -72,7 +70,7 @@ export function UserManagement() {
     email?: string
     password?: string
     name?: string
-    role?: 'ADMIN' | 'CAREGIVER' | 'FAMILY'
+    role?: 'ADMIN' | 'USER'
     status?: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'
   }) => {
     if (editingUser) {
@@ -84,16 +82,16 @@ export function UserManagement() {
           status: values.status,
         },
       })
-    } else {
-      // 确保在创建用户时必填字段存在
-      if (values.email && values.password && values.role) {
-        createMutation.mutate({
-          email: values.email,
-          password: values.password,
-          name: values.name,
-          role: values.role,
-        })
-      }
+      return
+    }
+
+    if (values.email && values.password && values.role) {
+      createMutation.mutate({
+        email: values.email,
+        password: values.password,
+        name: values.name,
+        role: values.role,
+      })
     }
   }
 
@@ -116,8 +114,7 @@ export function UserManagement() {
       valueType: 'select',
       valueEnum: {
         ADMIN: { text: roleLabels.ADMIN, status: 'Error' },
-        CAREGIVER: { text: roleLabels.CAREGIVER, status: 'Processing' },
-        FAMILY: { text: roleLabels.FAMILY, status: 'Success' },
+        USER: { text: roleLabels.USER, status: 'Processing' },
       },
       render: (_, record) => <Tag color={roleColors[record.role]}>{roleLabels[record.role]}</Tag>,
     },
@@ -138,12 +135,6 @@ export function UserManagement() {
       ),
     },
     {
-      title: '负责患者',
-      dataIndex: 'patientCount',
-      width: 100,
-      search: false,
-    },
-    {
       title: '操作',
       key: 'action',
       width: 220,
@@ -158,12 +149,7 @@ export function UserManagement() {
           >
             重置密码
           </Button>
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          >
+          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
             编辑
           </Button>
           <Popconfirm
@@ -185,7 +171,7 @@ export function UserManagement() {
     <div>
       <ProTable<User>
         columns={columns}
-        dataSource={data?.users || []}
+        dataSource={data?.users ?? []}
         rowKey="id"
         loading={data === undefined}
         pagination={{
@@ -235,8 +221,7 @@ export function UserManagement() {
           <Form.Item name="role" label="角色" rules={[{ required: true }]}>
             <Select>
               <Select.Option value="ADMIN">管理员</Select.Option>
-              <Select.Option value="CAREGIVER">护理人员</Select.Option>
-              <Select.Option value="FAMILY">家属</Select.Option>
+              <Select.Option value="USER">普通用户</Select.Option>
             </Select>
           </Form.Item>
           {editingUser && (

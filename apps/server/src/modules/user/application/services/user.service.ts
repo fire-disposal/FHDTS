@@ -1,32 +1,20 @@
-import { hashPassword, verifyPassword } from '../../../shared/infra/auth'
-// biome-ignore lint/correctness/noUnusedImports: Used for type inheritance in the Service base class
-import type { prisma } from '../../../shared/infra/database'
-import { Service } from '../../../shared/kernel/base'
-import { UnauthorizedError } from '../../../shared/kernel/errors'
+import { ConflictError, NotFoundError, UnauthorizedError } from '../../../../shared/kernel/errors.js'
+import { hashPassword, verifyPassword } from '../../../../shared/infra/auth.js'
+import type { prisma } from '../../../../shared/infra/database.js'
 
 interface UserSummary {
   id: string
   email: string
   name: string | null
-  role: string
-  status: string
+  role: 'ADMIN' | 'USER'
+  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'
   createdAt: Date
   lastLoginAt: Date | null
-  patientIds: string[]
-}
-
-interface UserProfile {
-  id: string
-  email: string
-  name: string | null
-  role: string
-  status: string
-  patientCount: number
 }
 
 interface CreateUserInput {
   email: string
-  role: 'ADMIN' | 'CAREGIVER' | 'FAMILY'
+  role: 'ADMIN' | 'USER'
   password: string
   name?: string
 }
@@ -34,11 +22,13 @@ interface CreateUserInput {
 interface UpdateUserInput {
   status?: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'
   name?: string
-  role?: 'ADMIN' | 'CAREGIVER' | 'FAMILY'
+  role?: 'ADMIN' | 'USER'
 }
 
-export class UserService extends Service {
-  async getProfile(userId: string): Promise<UserProfile> {
+export class UserService {
+  constructor(private readonly db: typeof prisma) {}
+
+  async getProfile(userId: string): Promise<UserSummary> {
     const user = await this.db.user.findUnique({
       where: { id: userId },
       select: {
@@ -47,6 +37,8 @@ export class UserService extends Service {
         name: true,
         role: true,
         status: true,
+        createdAt: true,
+        lastLoginAt: true,
       },
     })
 
@@ -54,28 +46,13 @@ export class UserService extends Service {
       throw new UnauthorizedError('User not found')
     }
 
-    // 获取用户的患者数量
-    const patientCount = await this.db.patient.count({
-      where: {
-        OR: [
-          { id: { in: [] } }, // 这里可能需要根据实际关系调整
-        ],
-      },
-    })
-
-    return {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      status: user.status,
-      patientCount,
-    }
+    return user
   }
 
   async getAll(): Promise<{ users: UserSummary[]; total: number }> {
     const [users, total] = await Promise.all([
       this.db.user.findMany({
+        orderBy: { createdAt: 'desc' },
         select: {
           id: true,
           email: true,
@@ -84,29 +61,12 @@ export class UserService extends Service {
           status: true,
           createdAt: true,
           lastLoginAt: true,
-          // 获取关联的患者ID
-          patients: {
-            select: {
-              id: true,
-            },
-          },
         },
       }),
       this.db.user.count(),
     ])
 
-    const transformedUsers = users.map(user => ({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      status: user.status,
-      createdAt: user.createdAt,
-      lastLoginAt: user.lastLoginAt,
-      patientIds: user.patients.map(p => p.id),
-    }))
-
-    return { users: transformedUsers, total }
+    return { users, total }
   }
 
   async getById(userId: string): Promise<UserSummary> {
@@ -120,43 +80,25 @@ export class UserService extends Service {
         status: true,
         createdAt: true,
         lastLoginAt: true,
-        // 获取关联的患者ID
-        patients: {
-          select: {
-            id: true,
-          },
-        },
       },
     })
 
     if (!user) {
-      throw new Error('User not found')
+      throw new NotFoundError('User')
     }
 
-    return {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      status: user.status,
-      createdAt: user.createdAt,
-      lastLoginAt: user.lastLoginAt,
-      patientIds: user.patients.map(p => p.id),
-    }
+    return user
   }
 
   async create(input: CreateUserInput): Promise<UserSummary> {
-    const existingUser = await this.db.user.findUnique({
-      where: { email: input.email },
-    })
-
-    if (existingUser) {
-      throw new Error('Email already exists')
+    const existing = await this.db.user.findUnique({ where: { email: input.email } })
+    if (existing) {
+      throw new ConflictError('Email already exists')
     }
 
     const passwordHash = await hashPassword(input.password)
 
-    const user = await this.db.user.create({
+    return this.db.user.create({
       data: {
         email: input.email,
         passwordHash,
@@ -171,28 +113,12 @@ export class UserService extends Service {
         status: true,
         createdAt: true,
         lastLoginAt: true,
-        patients: {
-          select: {
-            id: true,
-          },
-        },
       },
     })
-
-    return {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      status: user.status,
-      createdAt: user.createdAt,
-      lastLoginAt: user.lastLoginAt,
-      patientIds: user.patients.map(p => p.id),
-    }
   }
 
   async update(userId: string, input: UpdateUserInput): Promise<UserSummary> {
-    const user = await this.db.user.update({
+    return this.db.user.update({
       where: { id: userId },
       data: {
         status: input.status,
@@ -207,31 +133,12 @@ export class UserService extends Service {
         status: true,
         createdAt: true,
         lastLoginAt: true,
-        patients: {
-          select: {
-            id: true,
-          },
-        },
       },
     })
-
-    return {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      status: user.status,
-      createdAt: user.createdAt,
-      lastLoginAt: user.lastLoginAt,
-      patientIds: user.patients.map(p => p.id),
-    }
   }
 
   async delete(userId: string): Promise<{ success: boolean }> {
-    await this.db.user.delete({
-      where: { id: userId },
-    })
-
+    await this.db.user.delete({ where: { id: userId } })
     return { success: true }
   }
 
@@ -253,24 +160,24 @@ export class UserService extends Service {
       throw new UnauthorizedError('Invalid password')
     }
 
-    const newPasswordHash = await hashPassword(newPassword)
-
     await this.db.user.update({
       where: { id: userId },
-      data: { passwordHash: newPasswordHash },
+      data: { passwordHash: await hashPassword(newPassword) },
     })
 
     return { success: true }
   }
 
   async resetPassword(userId: string, newPassword: string): Promise<{ success: boolean }> {
-    const newPasswordHash = await hashPassword(newPassword)
-
     await this.db.user.update({
       where: { id: userId },
-      data: { passwordHash: newPasswordHash },
+      data: { passwordHash: await hashPassword(newPassword) },
     })
 
     return { success: true }
   }
+}
+
+export function createUserService(db: typeof prisma) {
+  return new UserService(db)
 }

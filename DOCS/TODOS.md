@@ -76,8 +76,8 @@ pnpm dev
 | `README.md` | 项目总览 + 快速开始 |
 | `DEPLOY.md` | 部署指南 |
 | `REFACTOR_SUMMARY.md` | 架构重构报告 |
-| `docs/biome-integration.md` | Biome 配置详情 |
-| `docs/frontend-trpc-migration.md` | 前端 tRPC 迁移指南 |
+| `DOCS/biome-integration.md` | Biome 配置详情 |
+| `DOCS/frontend-trpc-migration.md` | 前端 tRPC 迁移指南 |
 
 ---
 
