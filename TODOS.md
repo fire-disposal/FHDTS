@@ -56,8 +56,8 @@
 pnpm install
 
 # 2. 数据库初始化
-pnpm --filter db db:generate
-pnpm --filter db db:push
+pnpm --filter server db:generate
+pnpm --filter server db:push
 pnpm --filter server seed
 
 # 3. 启动开发

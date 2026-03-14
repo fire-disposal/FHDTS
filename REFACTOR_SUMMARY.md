@@ -169,8 +169,8 @@ apps/server/src/
 
 ```bash
 # 1. 测试当前功能
-pnpm --filter db db:generate
-pnpm --filter db db:push
+pnpm --filter server db:generate
+pnpm --filter server db:push
 pnpm --filter server seed
 pnpm dev
 

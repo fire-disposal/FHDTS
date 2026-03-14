@@ -118,7 +118,6 @@ novadt/
 │
 ├── packages/
 │   ├── config/           # 共享配置 (TypeScript)
-│   ├── db/               # 数据库包 (Prisma)
 │   └── shared/           # 共享类型和工具
 │
 ├── docker/               # Docker 配置
@@ -162,10 +161,10 @@ TCP_PORT=5858
 
 ```bash
 # 生成 Prisma 客户端
-pnpm --filter db db:generate
+pnpm --filter server db:generate
 
 # 推送表结构到数据库
-pnpm --filter db db:push
+pnpm --filter server db:push
 
 # 插入种子数据
 pnpm --filter server seed

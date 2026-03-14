@@ -15,7 +15,7 @@ ENV PNPM_HOME="/pnpm"
 
 COPY --from=builder /app/apps/server/dist ./dist
 COPY --from=builder /app/apps/web/dist ./public
-COPY --from=builder /app/packages/db/prisma ./prisma
+COPY --from=builder /app/apps/server/prisma ./prisma
 COPY --from=builder /app/node_modules/.pnpm/prisma@5.22.0/node_modules/prisma ./node_modules/prisma
 COPY --from=builder /app/node_modules/.pnpm/@prisma+client@5.22.0_prisma@5.22.0/node_modules/@prisma/client ./node_modules/@prisma/client
 

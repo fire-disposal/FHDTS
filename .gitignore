@@ -46,7 +46,7 @@ tmp
 temp
 
 # Prisma migrations (optional - commit if needed)
-# packages/db/prisma/migrations
+# apps/server/prisma/migrations
 
 # Vite
 *.local
