@@ -1,4 +1,4 @@
-import { TRPCError, initTRPC } from '@trpc/server'
+import { initTRPC, TRPCError } from '@trpc/server'
 import SuperJSON from 'superjson'
 import { verifyToken } from '../shared/platform/auth.js'
 import { prisma } from '../shared/platform/database.js'
