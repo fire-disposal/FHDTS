@@ -3,9 +3,6 @@ import { DashboardLayout } from '../components/layout/DashboardLayout'
 import { useAuthStore } from '../stores/authStore'
 import { Login } from './auth/Login'
 import { Dashboard } from './dashboard/Dashboard'
-import { DeviceManagement } from './devices/DeviceManagement'
-import DigitalTwinPage from './digital-twin/DigitalTwinPage'
-import { PatientManagement } from './patients/PatientManagement'
 import { UserManagement } from './users/UserManagement'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -47,9 +44,6 @@ export function Router() {
             }
           />
 
-          <Route path="patients" element={<PatientManagement />} />
-          <Route path="devices" element={<DeviceManagement />} />
-          <Route path="digital-twin" element={<DigitalTwinPage />} />
           <Route path="settings" element={<div>系统设置</div>} />
         </Route>
       </Routes>
