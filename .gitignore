@@ -50,3 +50,4 @@ temp
 
 # Vite
 *.local
+apps/server/dev.db

@@ -1,5 +1,3 @@
-export * from '@prisma/client'
-
 export type FhirObservation = {
   resourceType: 'Observation'
   status: string
