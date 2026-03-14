@@ -8,4 +8,4 @@ export function AuthProvider({ children }: AuthProviderProps) {
   return <>{children}</>
 }
 
-export type { Patient, PatientStatus, Role, User, UserStatus } from '../lib/trpc'
+export type { Patient, User } from '../lib/trpc'

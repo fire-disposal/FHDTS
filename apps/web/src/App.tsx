@@ -21,7 +21,6 @@ function App() {
   const [trpcClient] = useState(() => createTRPCClient())
 
   return (
-    // @ts-expect-error - tRPC typed client
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <ConfigProvider locale={zhCN}>
         <QueryClientProvider client={queryClient}>

@@ -2,6 +2,7 @@ import { LockOutlined, UserOutlined } from '@ant-design/icons'
 import { Button, Card, Form, Input } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import { useAuthLogin } from '../../hooks/api'
+import type { User } from '../../lib/trpc'
 import { useAuthStore } from '../../stores/authStore'
 
 export function Login() {
@@ -16,7 +17,7 @@ export function Login() {
 
   const handleSubmit = (values: { email: string; password: string }) => {
     loginMutation.mutate(values, {
-      onSuccess: data => {
+      onSuccess: (data: { user: User; token: string }) => {
         login(data.user, data.token)
       },
     })

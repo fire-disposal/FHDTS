@@ -10,7 +10,7 @@ import {
   useUpdateUser,
   useUsers,
 } from '../../hooks/api'
-import type { User } from '../../types'
+import type { User } from '../../lib/trpc'
 
 const roleLabels: Record<string, string> = {
   ADMIN: '管理员',
@@ -68,19 +68,32 @@ export function UserManagement() {
     })
   }
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: {
+    email?: string
+    password?: string
+    name?: string
+    role?: 'ADMIN' | 'CAREGIVER' | 'FAMILY'
+    status?: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'
+  }) => {
     if (editingUser) {
       updateMutation.mutate({
         userId: editingUser.id,
-        data: { name: values.name, role: values.role, status: values.status },
+        data: {
+          name: values.name,
+          role: values.role,
+          status: values.status,
+        },
       })
     } else {
-      createMutation.mutate({
-        email: values.email,
-        password: values.password,
-        name: values.name,
-        role: values.role,
-      })
+      // 确保在创建用户时必填字段存在
+      if (values.email && values.password && values.role) {
+        createMutation.mutate({
+          email: values.email,
+          password: values.password,
+          name: values.name,
+          role: values.role,
+        })
+      }
     }
   }
 

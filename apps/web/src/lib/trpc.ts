@@ -1,43 +1,30 @@
+import type { AppRouter } from '@server/router/index.ts'
 import { createTRPCReact, httpBatchLink } from '@trpc/react-query'
+import type { inferRouterInputs, inferRouterOutputs } from '@trpc/server'
+import SuperJSON from 'superjson'
 import { useAuthStore } from '../stores/authStore'
 import { API_URL } from './env'
 
-export type Role = 'ADMIN' | 'CAREGIVER' | 'FAMILY'
-export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'
-export type PatientStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'
+export type RouterInputs = inferRouterInputs<AppRouter>
+export type RouterOutputs = inferRouterOutputs<AppRouter>
 
-export interface User {
-  id: string
-  email: string
-  name: string | null
-  role: Role
-  status: UserStatus
-  patientCount: number
-  createdAt: Date
-  lastLoginAt: Date | null
-}
+// 直接从后端路由推断类型，避免重复定义
+export type User = RouterOutputs['user']['getProfile']
+export type GetAllUsersResponse = RouterOutputs['user']['getAll']
+export type UserSummary = GetAllUsersResponse extends { users: (infer U)[] } ? U : never
+export type Patient = RouterOutputs['patient']['getById']
+export type GetAllPatientsResponse = RouterOutputs['patient']['getAll']
+export type PatientSummary = GetAllPatientsResponse extends { patients: (infer P)[] } ? P : never
+export type LoginResponse = RouterOutputs['auth']['login']
 
-export interface Patient {
-  id: string
-  name: string
-  dateOfBirth: Date | string | null
-  gender: string | null
-  phone: string | null
-  status: PatientStatus
-  caregivers: Array<{ id: string; email: string; name: string | null }>
-  observationCount: number
-  deviceCount: number
-  createdAt: Date
-  address?: string | null
-}
-
-export const trpc = createTRPCReact()
+export const trpc = createTRPCReact<AppRouter>()
 
 export function createTRPCClient() {
   return trpc.createClient({
     links: [
       httpBatchLink({
         url: `${API_URL}/trpc`,
+        transformer: SuperJSON,
         headers: () => {
           const token = useAuthStore.getState().token
           return {

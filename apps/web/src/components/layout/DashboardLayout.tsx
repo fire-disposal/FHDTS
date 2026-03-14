@@ -1,12 +1,4 @@
-import {
-  AppstoreOutlined,
-  DashboardOutlined,
-  LogoutOutlined,
-  SettingOutlined,
-  TeamOutlined,
-  UserOutlined,
-  WifiOutlined,
-} from '@ant-design/icons'
+import { DashboardOutlined, LogoutOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons'
 import type { MenuProps } from 'antd'
 import { Avatar, Dropdown, Layout, Menu, Space, theme } from 'antd'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
@@ -16,8 +8,7 @@ const { Header, Sider, Content } = Layout
 
 const roleLabels: Record<string, string> = {
   ADMIN: '管理员',
-  CAREGIVER: '护理人员',
-  FAMILY: '家属',
+  USER: '用户',
 }
 
 export function DashboardLayout() {
@@ -35,16 +26,6 @@ export function DashboardLayout() {
       icon: <DashboardOutlined />,
       label: '仪表盘',
     },
-    {
-      key: '/patients',
-      icon: <TeamOutlined />,
-      label: '患者管理',
-    },
-    {
-      key: '/devices',
-      icon: <WifiOutlined />,
-      label: '设备管理',
-    },
     ...(user?.role === 'ADMIN'
       ? [
           {
@@ -54,11 +35,6 @@ export function DashboardLayout() {
           },
         ]
       : []),
-    {
-      key: '/digital-twin',
-      icon: <AppstoreOutlined />,
-      label: '数字孪生',
-    },
     {
       key: '/settings',
       icon: <SettingOutlined />,
@@ -116,7 +92,7 @@ export function DashboardLayout() {
             fontSize: 16,
           }}
         >
-          居家健康管理
+          系统管理
         </div>
         <Menu
           theme="dark"
@@ -137,7 +113,7 @@ export function DashboardLayout() {
             boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
           }}
         >
-          <h2 style={{ margin: 0, fontSize: 18 }}>居家健康管理系统</h2>
+          <h2 style={{ margin: 0, fontSize: 18 }}>系统管理平台</h2>
           <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" arrow>
             <Space style={{ cursor: 'pointer', padding: '8px 12px' }}>
               <Avatar size="small" icon={<UserOutlined />} />
