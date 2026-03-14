@@ -13,7 +13,3 @@ declare const process: {
   on: (event: string, listener: () => void) => void
   exit: (code?: number) => never
 }
-
-interface ImportMeta {
-  url: string
-}

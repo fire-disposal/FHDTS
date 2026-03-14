@@ -147,27 +147,57 @@ pnpm install
 ### 配置环境变量
 
 ```bash
-# 复制环境模板
-cp .env.example .env
+# 开发环境：无需配置，直接运行即可
+# 生产环境：根据部署方式配置
 
-# 编辑 .env 文件
-DATABASE_URL=postgresql://postgres:password@localhost:5432/digitaltwin
-JWT_SECRET=your-secret-key-here
-PORT=3000
-TCP_PORT=5858
+# 开发环境（默认）：
+# - 自动使用SQLite数据库 (file:./dev.db)
+# - JWT使用开发默认密钥
+# - 无需创建 .env 文件
+
+# Docker Compose生产部署：
+# - 数据库自动配置为固定PostgreSQL实例
+# - 连接：postgresql://digitaltwin:digitaltwin_prod_password@postgres:5432/digitaltwin
+# - 数据库不对外暴露端口，仅内部访问
+# - 必须设置 JWT_SECRET 环境变量
+
+# 必需变量（生产环境）：
+# JWT_SECRET=your-32-characters-minimum-secret-key
+
+# 可选变量：
+# PORT=3000
+# CORS_ORIGIN=http://localhost:5173
+# VITE_API_URL=http://localhost:3000
+# NODE_ENV=production
 ```
 
 ### 初始化数据库
 
 ```bash
-# 生成 Prisma 客户端
+# 开发环境（SQLite）：
 pnpm --filter server db:generate
-
-# 推送表结构到数据库
 pnpm --filter server db:push
-
-# 插入种子数据
 pnpm --filter server seed
+
+# 生产环境（Docker Compose PostgreSQL）：
+# 1. 启动Docker Compose服务
+docker compose up -d
+
+# 2. 进入应用容器执行数据库迁移
+docker compose exec app node -e "
+  const { execSync } = require('child_process');
+  console.log('正在初始化生产数据库...');
+  execSync('npx prisma db push', { stdio: 'inherit' });
+  execSync('node dist/seed.js', { stdio: 'inherit' });
+  console.log('数据库初始化完成');
+"
+
+# 3. 通过SSH隧道连接数据库（维护用）：
+# ssh -L 5432:localhost:5432 user@server -N
+# 然后使用数据库客户端连接 localhost:5432
+# 用户名：digitaltwin
+# 密码：digitaltwin_prod_password
+# 数据库：digitaltwin
 ```
 
 ### 启动开发服务
@@ -188,6 +218,161 @@ pnpm --filter web dev       # 前端 (http://localhost:5173)
 | 管理员 | admin@example.com | admin123 |
 | 护理人员 | caregiver@example.com | user123 |
 | 家属 | family@example.com | user123 |
+
+## 🚀 生产部署
+
+### 自动部署 (GitHub Actions)
+
+项目配置了简化的CI/CD流水线，专注于Docker化部署：
+
+1. **触发条件**：
+   - 推送到 `main` 分支
+   - 创建 `v*` 标签（如 `v1.0.0`）
+   - 手动触发 workflow
+
+2. **部署流程**：
+   - ✅ 代码检查和类型检查
+   - ✅ 单元测试
+   - ✅ 构建应用
+   - ✅ 构建Docker镜像（多阶段构建）
+   - ✅ 推送到GitHub Container Registry
+   - ✅ SSH自动部署到服务器
+
+3. **GitHub Secrets配置**：
+   ```yaml
+   DEPLOY_HOST: "服务器IP地址"
+   DEPLOY_USER: "ssh用户名"
+   DEPLOY_KEY: "ssh私钥"
+   JWT_SECRET: "JWT签名密钥（至少32字符）"
+   # 可选：
+   CORS_ORIGIN: "*"
+   JWT_EXPIRES_IN: "7d"
+   ```
+
+### 服务器设置
+
+#### 1. 初始设置（一次性）
+```bash
+# 在服务器上运行
+cd /opt
+git clone https://github.com/fire-disposal/FHDTS.git digital-twin
+cd digital-twin
+
+# 创建环境配置文件
+cp .env.example .env
+# 编辑 .env 文件，设置 JWT_SECRET 等变量
+
+# 启动服务
+docker compose up -d
+```
+
+#### 2. 后续部署
+```bash
+# 方法1：使用GitHub Actions自动部署（推荐）
+# 推送代码到main分支即可
+
+# 方法2：手动在服务器上部署
+cd /opt/digital-twin
+./scripts/deploy-server.sh
+```
+
+#### 3. 部署验证
+```bash
+# 检查服务状态
+curl http://localhost:3000/api/health
+
+# 查看容器日志
+docker compose logs -f app
+
+# 查看服务状态
+docker compose ps
+```
+
+### 生产环境架构
+
+```
+┌─────────────────────────────────────────────┐
+│             生产服务器                      │
+│  ┌─────────────┐  ┌─────────────┐        │
+│  │  应用容器   │  │ PostgreSQL  │        │
+│  │  (Node.js)  │  │  容器       │        │
+│  │             │  │             │        │
+│  │ 端口: 3000  │  │ 端口: 内部  │        │
+│  └──────┬──────┘  └──────┬──────┘        │
+│         │                │               │
+│         └────────────────┘               │
+│                内部网络                   │
+└─────────────────────────────────────────────┘
+```
+
+### 数据库访问
+
+生产环境数据库**不对外暴露端口**，仅通过SSH隧道访问：
+
+```bash
+# 建立SSH隧道
+ssh -L 5432:localhost:5432 user@your-server -N
+
+# 连接数据库
+# 主机: localhost
+# 端口: 5432
+# 用户: digitaltwin
+# 密码: digitaltwin_prod_password
+# 数据库: digitaltwin
+```
+
+### 健康检查
+
+部署完成后验证服务状态：
+
+```bash
+# 检查服务状态
+curl http://your-server:3000/api/health
+
+# 查看部署信息
+curl http://your-server:3000/api/info
+
+# 查看容器日志
+docker compose logs -f
+```
+
+### 监控和维护
+
+1. **日志查看**：
+   ```bash
+   docker compose logs -f app          # 实时应用日志
+   docker compose logs -f postgres     # 数据库日志
+   ```
+
+2. **服务管理**：
+   ```bash
+   docker compose ps                   # 查看服务状态
+   docker compose restart app          # 重启应用
+   docker compose down                 # 停止所有服务
+   docker compose up -d                # 启动所有服务
+   ```
+
+3. **数据库维护**：
+   ```bash
+   # 执行数据库迁移
+   docker compose exec app npx prisma db push
+
+   # 查看数据库大小
+   docker compose exec postgres psql -U digitaltwin -d digitaltwin \
+     -c "SELECT pg_size_pretty(pg_database_size('digitaltwin'));"
+   ```
+
+### CICD环境检查
+
+项目提供了CICD环境检查工具：
+
+```bash
+# 检查CICD环境配置
+pnpm check:ci
+
+# 生产环境检查
+NODE_ENV=production pnpm check:ci
+```
 
 ## 📡 API 文档
 

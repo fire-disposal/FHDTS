@@ -8,7 +8,8 @@
     "lint": "biome check --write .",
     "lint:check": "biome check .",
     "format": "biome format --write .",
-    "typecheck": "turbo run typecheck"
+    "typecheck": "turbo run typecheck",
+    "check:ci": "node scripts/check-env.js"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.6",
