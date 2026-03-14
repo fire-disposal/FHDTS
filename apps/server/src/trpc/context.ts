@@ -1,6 +1,7 @@
 import { initTRPC, TRPCError } from '@trpc/server'
-import { verifyToken } from '../shared/infra/auth.js'
-import { prisma } from '../shared/infra/database.js'
+import SuperJSON from 'superjson'
+import { verifyToken } from '../shared/infra/auth'
+import { prisma } from '../shared/infra/database'
 
 interface TRPCContext {
   userId?: string
@@ -31,7 +32,9 @@ export const createTRPCContext = async ({ req }: { req: Request }): Promise<TRPC
   return {}
 }
 
-const t = initTRPC.context<TRPCContext>().create()
+const t = initTRPC.context<TRPCContext>().create({
+  transformer: SuperJSON,
+})
 
 export const createTRPCRouter = t.router
 export const publicProcedure = t.procedure
@@ -56,10 +59,14 @@ export const protectedProcedure = t.procedure.use(async opts => {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Account is not active' })
   }
 
+  if (!ctx.email) {
+    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Email not found in context' })
+  }
+
   return opts.next({
     ctx: {
       userId: ctx.userId,
-      email: ctx.email!,
+      email: ctx.email,
       role: user.role,
     },
   })
@@ -89,10 +96,14 @@ export const adminProcedure = t.procedure.use(async opts => {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Admin access required' })
   }
 
+  if (!ctx.email) {
+    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Email not found in context' })
+  }
+
   return opts.next({
     ctx: {
       userId: ctx.userId,
-      email: ctx.email!,
+      email: ctx.email,
       role: user.role,
     },
   })

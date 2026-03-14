@@ -4,8 +4,8 @@ import fastifyCors from '@fastify/cors'
 import fastifyStatic from '@fastify/static'
 import Fastify from 'fastify'
 import { startTcpServer } from './iot/server.js'
-import { gracefulShutdown } from './shared/infra/database.js'
-import { prisma } from './shared/infra/prisma.js'
+import { gracefulShutdown, prisma } from './shared/infra/database.js'
+import { env } from './shared/infra/env.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -15,7 +15,7 @@ const fastify = Fastify({
 })
 
 await fastify.register(fastifyCors, {
-  origin: process.env.CORS_ORIGIN || '*',
+  origin: env.CORS_ORIGIN,
   credentials: true,
 })
 
@@ -31,10 +31,14 @@ fastify.register(async app => {
     uptime: process.uptime(),
   }))
 
-  app.get('/trpc', async () => ({ message: 'tRPC endpoint ready' }))
+  app.get('/api/info', async () => ({
+    name: 'Digital Twin API',
+    version: '0.0.1',
+    environment: env.NODE_ENV,
+  }))
 })
 
-const PORT = process.env.PORT || 3000
+const PORT = env.PORT
 
 const start = async () => {
   let tcpServer: ReturnType<typeof startTcpServer> | null = null
@@ -68,8 +72,8 @@ const start = async () => {
     await fastify.listen({ port: Number(PORT), host: '0.0.0.0' })
     console.log(`🚀 Server running at http://0.0.0.0:${PORT}`)
 
-    tcpServer = startTcpServer(5858)
-    console.log('📡 TCP IoT server listening on port 5858')
+    tcpServer = startTcpServer(env.TCP_PORT)
+    console.log(`📡 TCP IoT server listening on port ${env.TCP_PORT}`)
   } catch (err) {
     fastify.log.error(err)
     await prisma.$disconnect()
